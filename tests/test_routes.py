@@ -159,6 +159,58 @@ async def test_refresh_command_refreshes_configured_station(
 
 
 @pytest.mark.anyio
+async def test_refresh_command_accepts_automation_runtime_contract(
+    client: httpx.AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    await configure_placeholder_station(client)
+
+    async def fake_refresh_entry(entry: dict[str, Any]) -> dict[str, Any]:
+        return {"station_id": entry["station_id"], "temperature_c": 22.0}
+
+    monkeypatch.setattr(command_routes, "refresh_entry", fake_refresh_entry)
+
+    response = await client.post(
+        "/command",
+        json={
+            "contract_version": "automation.runtime.command.v1",
+            "command": "refresh_readings",
+            "target": {
+                "config_id": "weatherxm-station",
+                "device_id": "weatherxm-station",
+            },
+            "params": {"force": True},
+            "capability": "device.refresh",
+            "capability_requirements": ["device.refresh"],
+        },
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["ok"] is True
+    assert body["command"] == "refresh"
+    assert body["contract_version"] == "automation.runtime.command.v1"
+    assert body["config_id"] == "weatherxm-station"
+    assert body["params"] == {"force": True}
+    assert body["state"] == {"station_id": "station-1", "temperature_c": 22.0}
+
+
+@pytest.mark.anyio
+async def test_command_rejects_unsupported_capability(client: httpx.AsyncClient) -> None:
+    response = await client.post(
+        "/command",
+        json={
+            "command": "refresh",
+            "target": {"device_id": "weatherxm-station"},
+            "capability": "switch.power",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["error"] == "unsupported_capability"
+
+
+@pytest.mark.anyio
 async def test_sync_cloud_command_refreshes_all_entries(
     client: httpx.AsyncClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -1,5 +1,13 @@
 {
+  "contract_version": "automation.runtime.command.v1",
   "command": "sync_cloud",
-  "device_id": "weatherxm-station",
-  "config_id": "weatherxm-station"
+  "target": {
+    "device_id": "weatherxm-station",
+    "config_id": "weatherxm-station"
+  },
+  "params": {},
+  "capability": "weather.refresh",
+  "capability_requirements": [
+    "weather.refresh"
+  ]
 }
