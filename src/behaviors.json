@@ -44,7 +44,10 @@
           "label": "Station is connected",
           "type": "boolean",
           "capability": "sensor.connected",
-          "operators": ["eq", "neq"],
+          "operators": [
+            "eq",
+            "neq"
+          ],
           "runtime": {
             "source": "state",
             "field": "connected",
@@ -76,7 +79,13 @@
             }
           ],
           "capability": "sensor.temperature_c",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "temperature_c",
@@ -108,7 +117,13 @@
             }
           ],
           "capability": "sensor.feels_like_c",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "feels_like_c",
@@ -140,7 +155,13 @@
             }
           ],
           "capability": "sensor.dew_point_c",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "dew_point_c",
@@ -183,7 +204,13 @@
             }
           ],
           "capability": "sensor.humidity_percent",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "humidity_percent",
@@ -215,7 +242,13 @@
             }
           ],
           "capability": "sensor.precipitation_mm",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "precipitation_mm",
@@ -247,7 +280,13 @@
             }
           ],
           "capability": "sensor.precipitation_accumulated_mm",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "precipitation_accumulated_mm",
@@ -279,7 +318,13 @@
             }
           ],
           "capability": "sensor.wind_speed_ms",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "wind_speed_ms",
@@ -311,7 +356,13 @@
             }
           ],
           "capability": "sensor.wind_gust_ms",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "wind_gust_ms",
@@ -343,7 +394,13 @@
             }
           ],
           "capability": "sensor.wind_direction_deg",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "wind_direction_deg",
@@ -375,7 +432,13 @@
             }
           ],
           "capability": "sensor.pressure_hpa",
-          "operators": ["<", "<=", ">", ">=", "eq"],
+          "operators": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "pressure_hpa",
@@ -407,7 +470,13 @@
             }
           ],
           "capability": "sensor.uv_index",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "uv_index",
@@ -439,7 +508,13 @@
             }
           ],
           "capability": "sensor.solar_irradiance_w_m2",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "solar_irradiance_w_m2",
@@ -471,7 +546,13 @@
             }
           ],
           "capability": "sensor.qod_score",
-          "operators": ["<", "<=", ">", ">=", "eq"],
+          "operators": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "qod_score",
@@ -503,7 +584,13 @@
             }
           ],
           "capability": "sensor.api_rate_limit_remaining",
-          "operators": ["<", "<=", ">", ">=", "eq"],
+          "operators": [
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "api_rate_limit_remaining",
@@ -535,7 +622,13 @@
             }
           ],
           "capability": "sensor.api_latency_ms",
-          "operators": [">", ">=", "<", "<=", "eq"],
+          "operators": [
+            ">",
+            ">=",
+            "<",
+            "<=",
+            "eq"
+          ],
           "runtime": {
             "source": "state",
             "field": "api_latency_ms",
@@ -565,7 +658,10 @@
             "liveRunAllowed": true
           },
           "targeting": {
-            "modes": ["picked_devices", "by_integration"],
+            "modes": [
+              "picked_devices",
+              "by_integration"
+            ],
             "minTargets": 1,
             "maxTargets": 1
           },
@@ -596,7 +692,9 @@
             "liveRunAllowed": true
           },
           "targeting": {
-            "modes": ["by_integration"],
+            "modes": [
+              "by_integration"
+            ],
             "minTargets": 0,
             "maxTargets": 0
           },
@@ -615,7 +713,10 @@
         }
       ],
       "targeting": {
-        "modes": ["picked_devices", "by_integration"],
+        "modes": [
+          "picked_devices",
+          "by_integration"
+        ],
         "supportsGroups": false,
         "supportsRooms": false
       },
@@ -732,7 +833,9 @@
             },
             "target": {
               "mode": "selection",
-              "configIds": ["{{configId}}"]
+              "configIds": [
+                "{{configId}}"
+              ]
             },
             "parameters": {},
             "failure": {
@@ -778,5 +881,73 @@
       }
     }
   ],
-  "behaviorSchemaVersion": "integration.behaviors.v2"
+  "behaviorSchemaVersion": "integration.behaviors.v2",
+  "telemetry": {
+    "capabilityMappings": [
+      {
+        "nativeMetric": "api_latency_ms",
+        "capability": "sensor.api_latency_ms"
+      },
+      {
+        "nativeMetric": "api_rate_limit_remaining",
+        "capability": "sensor.api_rate_limit_remaining"
+      },
+      {
+        "nativeMetric": "connected",
+        "capability": "sensor.connected"
+      },
+      {
+        "nativeMetric": "dew_point_c",
+        "capability": "sensor.dew_point_c"
+      },
+      {
+        "nativeMetric": "feels_like_c",
+        "capability": "sensor.feels_like_c"
+      },
+      {
+        "nativeMetric": "humidity_percent",
+        "capability": "sensor.humidity_percent"
+      },
+      {
+        "nativeMetric": "precipitation_accumulated_mm",
+        "capability": "sensor.precipitation_accumulated_mm"
+      },
+      {
+        "nativeMetric": "precipitation_mm",
+        "capability": "sensor.precipitation_mm"
+      },
+      {
+        "nativeMetric": "pressure_hpa",
+        "capability": "sensor.pressure_hpa"
+      },
+      {
+        "nativeMetric": "qod_score",
+        "capability": "sensor.qod_score"
+      },
+      {
+        "nativeMetric": "solar_irradiance_w_m2",
+        "capability": "sensor.solar_irradiance_w_m2"
+      },
+      {
+        "nativeMetric": "temperature_c",
+        "capability": "sensor.temperature_c"
+      },
+      {
+        "nativeMetric": "uv_index",
+        "capability": "sensor.uv_index"
+      },
+      {
+        "nativeMetric": "wind_direction_deg",
+        "capability": "sensor.wind_direction_deg"
+      },
+      {
+        "nativeMetric": "wind_gust_ms",
+        "capability": "sensor.wind_gust_ms"
+      },
+      {
+        "nativeMetric": "wind_speed_ms",
+        "capability": "sensor.wind_speed_ms"
+      }
+    ]
+  }
 }
