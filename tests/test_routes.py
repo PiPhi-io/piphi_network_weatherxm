@@ -143,18 +143,32 @@ async def test_refresh_command_refreshes_configured_station(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     await configure_placeholder_station(client)
+    refreshes = 0
 
     async def fake_refresh_entry(entry: dict[str, Any]) -> dict[str, Any]:
+        nonlocal refreshes
+        refreshes += 1
         return {"station_id": entry["station_id"], "temperature_c": 22.0}
 
     monkeypatch.setattr(command_routes, "refresh_entry", fake_refresh_entry)
 
+    headers = {"X-PiPhi-Idempotency-Key": "weatherxm-refresh-idempotency-1"}
     response = await client.post(
         "/command",
         json={"command": "refresh", "device_id": "weatherxm-station", "config_id": "weatherxm-station"},
+        headers=headers,
+    )
+    replay = await client.post(
+        "/command",
+        json={"command": "refresh", "device_id": "weatherxm-station", "config_id": "weatherxm-station"},
+        headers=headers,
     )
 
     assert response.status_code == 200
+    assert replay.status_code == 200
+    assert response.json()["replayed"] is False
+    assert replay.json()["replayed"] is True
+    assert refreshes == 1
     assert response.json()["state"] == {"station_id": "station-1", "temperature_c": 22.0}
 
 

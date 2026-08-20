@@ -1,13 +1,41 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from piphi_runtime_kit_python import build_event_ingest_response
+from fastapi import APIRouter, HTTPException, Request
+from piphi_runtime_kit_python import (
+    AutomationActionRequest,
+    AutomationActionResult,
+    AutomationRegistry,
+    SQLiteAutomationIdempotencyStore,
+    build_event_ingest_response,
+)
+from piphi_runtime_kit_python.fastapi import (
+    dispatch_automation_action_from_fastapi,
+    sync_runtime_auth_from_fastapi_request,
+)
 
-from ..state import append_runtime_event, commands, refresh_all_entries, refresh_entry, registry
+from ..state import (
+    append_runtime_event,
+    commands,
+    refresh_all_entries,
+    refresh_entry,
+    registry,
+    runtime,
+)
 
 router = APIRouter(tags=["commands"])
+_ledger_path = Path(
+    os.getenv(
+        "PIPHI_AUTOMATION_LEDGER_PATH",
+        "/.piphinetwork/automation-actions.sqlite3",
+    )
+)
+automation_registry = AutomationRegistry(
+    idempotency_store=SQLiteAutomationIdempotencyStore(_ledger_path)
+)
 
 COMMAND_ALIASES = {
     "refresh_readings": "refresh",
@@ -60,8 +88,65 @@ def _validate_capabilities(payload: dict[str, Any]) -> None:
         )
 
 
+async def _execute_registered_command(
+    action_request: AutomationActionRequest,
+) -> AutomationActionResult:
+    extras = action_request.model_extra or {}
+    device_id = str(action_request.device_id or "demo-device")
+    config_id = str(action_request.config_id or device_id)
+    entry = registry.get(config_id) or {
+        "device_id": device_id,
+        "config_id": config_id,
+    }
+    try:
+        refreshed_state = None
+        if action_request.command == "sync_cloud":
+            refreshed_state = await refresh_all_entries()
+        elif action_request.command == "refresh" and registry.get(config_id):
+            refreshed_state = await refresh_entry(entry)
+    except Exception as exc:
+        return AutomationActionResult.failure(
+            str(exc),
+            retryable=True,
+            metadata={"status_code": 503},
+        )
+    target = extras.get("target") if isinstance(extras.get("target"), dict) else {}
+    event = append_runtime_event(
+        "runtime.command.received",
+        entry,
+        {
+            "command": action_request.command,
+            "device_id": device_id,
+            "entity_id": action_request.entity_id,
+            "args": action_request.args,
+            "target": target,
+            "refreshed": refreshed_state is not None,
+        },
+    )
+    response = build_event_ingest_response(event)
+    response_payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
+    return AutomationActionResult.success(
+        {
+            **response_payload,
+            "ok": True,
+            "command": action_request.command,
+            "contract_version": extras.get("contract_version"),
+            "device_id": device_id,
+            "config_id": config_id,
+            "target": target,
+            "params": action_request.args,
+            "state": refreshed_state,
+        }
+    )
+
+
+for _command_name in sorted(commands):
+    automation_registry.action(_command_name)(_execute_registered_command)
+
+
 @router.post("/command")
-async def command(payload: dict[str, Any]):
+async def command(payload: dict[str, Any], request: Request):
+    sync_runtime_auth_from_fastapi_request(runtime, request)
     command_name = _resolve_command_name(payload)
     if not command_name:
         _structured_error(400, "missing_command", "Missing command")
@@ -71,37 +156,23 @@ async def command(payload: dict[str, Any]):
 
     device_id = str(payload.get("device_id") or _target_value(payload, "device_id") or "demo-device")
     config_id = str(payload.get("config_id") or _target_value(payload, "config_id") or device_id)
-    entry = registry.get(config_id) or {
-        "device_id": device_id,
-        "config_id": config_id,
-    }
-    refreshed_state = None
-    if command_name == "sync_cloud":
-        refreshed_state = await refresh_all_entries()
-    elif command_name == "refresh" and registry.get(config_id):
-        refreshed_state = await refresh_entry(entry)
-    event = append_runtime_event(
-        "runtime.command.received",
-        entry,
+    params = payload.get("params") or payload.get("args") or {}
+    if not isinstance(params, dict):
+        _structured_error(400, "invalid_params", "Command params must be an object")
+    result = await dispatch_automation_action_from_fastapi(
+        automation_registry,
+        request,
         {
+            **payload,
             "command": command_name,
+            "config_id": config_id,
             "device_id": device_id,
-            "entity_id": payload.get("entity_id"),
-            "args": payload.get("params") or payload.get("args") or {},
-            "target": _payload_dict(payload.get("target")),
-            "refreshed": refreshed_state is not None,
+            "args": params,
         },
     )
-    response = build_event_ingest_response(event)
-    response_payload = response.model_dump() if hasattr(response, "model_dump") else dict(response)
-    return {
-        **response_payload,
-        "ok": True,
-        "command": command_name,
-        "contract_version": payload.get("contract_version"),
-        "device_id": device_id,
-        "config_id": config_id,
-        "target": _payload_dict(payload.get("target")),
-        "params": payload.get("params") or payload.get("args") or {},
-        "state": refreshed_state,
-    }
+    if not result.ok:
+        raise HTTPException(
+            status_code=int(result.metadata.get("status_code") or 503),
+            detail=result.error,
+        )
+    return {**result.result, "replayed": result.replayed}
