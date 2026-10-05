@@ -224,5 +224,10 @@
         "default_widget": "tile"
       }
     }
-  ]
+  ],
+  "ui": {
+    "experience_packages": [
+      {"registry_id": "io.piphi.weatherxm-weather", "version_range": ">=0.1,<1", "auto_install": true}
+    ]
+  }
 }
