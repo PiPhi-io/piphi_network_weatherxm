@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from ..contract import ENDPOINTS, REQUIRED_ENDPOINTS
 from ..settings import (
@@ -13,14 +13,24 @@ from ..settings import (
     PROJECT_KIND,
     PROJECT_PRESET,
 )
-from ..state import registry
+from ..state import registry, starter
 
 router = APIRouter(tags=["runtime"])
 
 
 @router.get("/state")
-async def state() -> dict[str, Any]:
-    return {
+async def state(
+    refresh: bool = False,
+    refresh_request_id: str | None = None,
+) -> dict[str, Any]:
+    try:
+        state_payload = await starter.state.response(
+            refresh=refresh,
+            refresh_request_id=refresh_request_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    payload: dict[str, Any] = {
         "summary": {
             "active_config_count": len(registry.ids()),
             "recent_event_count": len(registry.recent_events),
@@ -28,6 +38,9 @@ async def state() -> dict[str, Any]:
         "entries": registry.entries,
         "state_snapshots": registry.state_snapshots,
     }
+    if "refresh" in state_payload:
+        payload["refresh"] = state_payload["refresh"]
+    return payload
 
 
 @router.get("/contract")

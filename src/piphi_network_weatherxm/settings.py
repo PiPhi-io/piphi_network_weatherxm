@@ -4,7 +4,7 @@ import os
 
 INTEGRATION_ID = "piphi-network-weatherxm"
 INTEGRATION_NAME = "PiPhi Network WeatherXM"
-INTEGRATION_VERSION = "0.1.0"
+INTEGRATION_VERSION = "0.1.1"
 PROJECT_KIND = "integration"
 PROJECT_PRESET = "cloud-polling-api"
 PROJECT_DOMAIN = "cloud-api"

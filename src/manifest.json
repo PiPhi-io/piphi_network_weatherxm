@@ -3,7 +3,7 @@
   "manifest_version": "1.0",
   "id": "piphi-network-weatherxm",
   "name": "PiPhi Network WeatherXM",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PiPhi integration runtime for WeatherXM stations using the WeatherXM public API.",
   "metadata": {
     "generator": "piphi-network-create",
