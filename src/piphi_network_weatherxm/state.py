@@ -162,3 +162,4 @@ async def refresh_all_entries() -> list[dict[str, Any]]:
     for entry in registry.entries.values():
         results.append(await refresh_entry(entry))
     return results
+starter.state.provide(refresh_all_entries, source=INTEGRATION_ID)
