@@ -39,6 +39,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
   packages: write
 
 concurrency:
@@ -48,8 +49,7 @@ concurrency:
 env:
   RELEASE_IMAGE: piphinetwork/weatherxm
   RELEASE_REGISTRY_KIND: dockerhub
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_USERNAME || secrets.DOCKER_USERNAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' && secrets.DOCKERHUB_TOKEN || secrets.DOCKER_PASSWORD }}
+  DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_OIDC_CONNECTIONID }}
 
 jobs:
   release:
@@ -116,6 +116,14 @@ jobs:
           fi
           echo "Resolved version: $VERSION"
 
+      - name: Validate bumped release contract
+        run: |
+          python -m pip install -e .[dev]
+          python -m json.tool src/manifest.json >/dev/null
+          python -m json.tool experiences/weather/package.source.json >/dev/null
+          pytest
+          python scripts/validate.py
+
       - name: Reject latest on prereleases
         shell: bash
         run: |
@@ -145,7 +153,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/manifest.json
+          git add src/manifest.json src/piphi_network_weatherxm/settings.py experiences/weather/package.source.json
           for file in pyproject.toml package.json go.mod; do
             if [[ -f "$file" ]]; then
               git add "$file"
@@ -160,6 +168,17 @@ jobs:
         run: |
           set -euo pipefail
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Bind image to reviewed release contracts
+        id: contracts
+        run: |
+          echo "manifest_sha256=$(sha256sum src/manifest.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          echo "behaviors_sha256=$(sha256sum src/behaviors.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish immutable release revision
+        run: |
+          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin "v${{ steps.version.outputs.version }}"
 
       - name: Require supported registry
         if: ${{ env.RELEASE_REGISTRY_KIND == 'unsupported' }}
@@ -176,18 +195,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hub
-        if: ${{ env.RELEASE_REGISTRY_KIND == 'dockerhub' && env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
+      - name: Exchange Docker Hub OIDC token
+        if: ${{ env.RELEASE_REGISTRY_KIND == 'dockerhub' && env.DOCKERHUB_OIDC_CONNECTIONID != '' }}
+        id: docker_oidc
+        uses: docker/oidc-action@v1
         with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+          connection-id: ${{ env.DOCKERHUB_OIDC_CONNECTIONID }}
 
-      - name: Require Docker Hub credentials
-        if: ${{ env.RELEASE_REGISTRY_KIND == 'dockerhub' && (env.DOCKERHUB_USERNAME == '' || env.DOCKERHUB_TOKEN == '') }}
+      - name: Log in to Docker Hub
+        if: ${{ env.RELEASE_REGISTRY_KIND == 'dockerhub' && env.DOCKERHUB_OIDC_CONNECTIONID != '' }}
+        uses: docker/login-action@v4.5.0
+        with:
+          username: piphinetwork
+          password: ${{ steps.docker_oidc.outputs.token }}
+
+      - name: Require Docker Hub OIDC connection
+        if: ${{ env.RELEASE_REGISTRY_KIND == 'dockerhub' && env.DOCKERHUB_OIDC_CONNECTIONID == '' }}
         shell: bash
         run: |
-          echo "Set DOCKERHUB_USERNAME/DOCKERHUB_TOKEN or DOCKER_USERNAME/DOCKER_PASSWORD secrets before releasing." >&2
+          echo "Set the DOCKERHUB_OIDC_CONNECTIONID organization variable before releasing." >&2
           exit 1
 
       - name: Set up QEMU
@@ -221,15 +247,29 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            RELEASE_VERSION=${{ steps.version.outputs.version }}
+            SOURCE_REVISION=${{ steps.git.outputs.sha }}
+            SOURCE_REPOSITORY=${{ github.server_url }}/${{ github.repository }}
+            MANIFEST_SHA256=${{ steps.contracts.outputs.manifest_sha256 }}
+            BEHAVIORS_SHA256=${{ steps.contracts.outputs.behaviors_sha256 }}
           cache-from: type=gha
-          cache-to: type=gha,mode=min
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
 
-      - name: Push release commit and tag
-        shell: bash
+      - name: Package release assets and checksums
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          set -euo pipefail
-          git push origin HEAD:${GITHUB_REF_NAME}
-          git push origin "v${{ steps.version.outputs.version }}"
+          cp src/manifest.json "weatherxm-manifest-${VERSION}.json"
+          cp src/behaviors.json "weatherxm-behaviors-${VERSION}.json"
+          cp experiences/weather/package.source.json "weatherxm-experience-${VERSION}.json"
+          sha256sum \
+            "weatherxm-manifest-${VERSION}.json" \
+            "weatherxm-behaviors-${VERSION}.json" \
+            "weatherxm-experience-${VERSION}.json" \
+            > SHA256SUMS
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -238,6 +278,12 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ steps.version.outputs.stable != 'true' }}
           name: v${{ steps.version.outputs.version }}
+          fail_on_unmatched_files: true
+          files: |
+            weatherxm-manifest-${{ steps.version.outputs.version }}.json
+            weatherxm-behaviors-${{ steps.version.outputs.version }}.json
+            weatherxm-experience-${{ steps.version.outputs.version }}.json
+            SHA256SUMS
 
       - name: Release summary
         shell: bash
